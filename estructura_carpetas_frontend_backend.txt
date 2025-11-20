@@ -1,0 +1,46 @@
+Estructura sugerida para un solo proyecto Next.js 15 (App Router) que cubre frontend y backend (API Routes + Server Actions) usando la pila descrita en EstructuraTecnologias.txt.
+
+levely/
+├─ app/                         // App Router: UI (marketing/dashboard) + Server Actions
+│  ├─ (marketing)/
+│  ├─ (dashboard)/
+│  ├─ api/                      // API Routes edge-friendly (cuando se requieran)
+│  └─ layout.tsx
+├─ components/                  // shadcn/ui + Radix components compartidos
+├─ lib/
+│  ├─ prisma/                   // Cliente Prisma + helpers de pooling
+│  ├─ repositories/             // DAO/repository layer encapsulando queries complejas
+│  ├─ supabase/                 // SDK configurado (Auth, Storage, Realtime)
+│  ├─ xp/                       // Fórmulas de XP y niveles
+│  ├─ realtime/                 // Hooks/utilidades para likes y notificaciones
+│  └─ validations/              // Schemas Zod reutilizables
+├─ server-actions/              // Organización opcional de acciones pesadas
+├─ styles/
+├─ public/
+│  ├─ favicon.ico
+│  └─ og-image.png
+├─ prisma/
+│  ├─ schema.prisma
+│  └─ migrations/
+├─ scripts/
+│  ├─ seed.ts
+│  └─ postdeploy.ts             // Ejecutado tras deploy para migraciones/seeds
+├─ tests/
+│  ├─ unit/
+│  ├─ integration/
+│  └─ e2e/                      // Playwright para smoke tests en Vercel
+├─ .env.local.example           // Variables Supabase/Auth/Storage documentadas
+├─ next.config.js
+├─ package.json
+├─ pnpm-lock.yaml / bun.lockb (según gestor)
+├─ tailwind.config.js
+├─ postcss.config.js
+└─ README.md
+
+Infra y documentación opcional
+├─ docs/
+├─ infra/
+│  ├─ vercel/                   // Configuración de entornos y webhooks
+│  └─ monitorizacion/           // Alertas, dashboards
+└─ .github/
+	└─ workflows/                // CI (lint + prisma migrate + tests)

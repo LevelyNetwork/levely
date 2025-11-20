@@ -1,293 +1,123 @@
-LEVELY - PLAN DE PASOS PARA MVP (Backend + Frontend sencillo)
-===============================================================
+LEVELY - PASOS PARA EL MVP (Next.js 15 + Supabase + Prisma)
+==========================================================
 
 Objetivo
 --------
-Construir un MVP funcional de LEVELY que permita:
-- Crear usuarios (mínimo: alta simple sin autenticación compleja).
-- Crear publicaciones (posts) con autor y contenido.
-- Listar el feed con posts ordenados por fecha (más nuevo primero).
-- Dar "like" a un post.
-- Asignar XP por acciones (ej.: +100 al crear post; +1 por like recibido).
-- Calcular y exponer el nivel del usuario en función de su XP (fórmula simple).
-- UI mínima (HTML+JS) para crear y visualizar posts y likes.
+Construir un MVP funcional en un único proyecto Next.js 15 (App Router) desplegado en Vercel que use Supabase (Postgres + Auth + Storage + Realtime) y Prisma 5.20+. El MVP debe permitir:
+- Registro/login con OAuth (Google/GitHub) vía Supabase Auth.
+- Creación de usuarios enriquecidos (bio, foto, XP total) tras el onboarding.
+- Creación de publicaciones (texto + imagen opcional) mediante Server Actions.
+- Feed ordenado por fecha con likes en tiempo real (Supabase Realtime o Prisma Pulse).
+- Asignación de XP (+100 crear post, +1 like recibido) y cálculo de nivel simple.
+- UI responsive construida con Tailwind + shadcn/ui + Radix.
 
-Alcance técnico mínimo
-----------------------
-- Backend: Java 17 con Spring Boot, Spring Web, Spring Data JPA, PostgreSQL Driver.
-- Persistencia: PostgreSQL en Docker (dev y prod). H2 opcional para tests.
-- Frontend: página estática simple (HTML + CSS + JS) servida por el backend.
-- Pruebas: verificación manual con Postman/Thunder Client; smoke test básico.
+Stack técnico mínimo
+--------------------
+- Next.js 15 App Router + Server Actions (sin API separada).
+- Prisma 5.20+ conectado a Supabase Postgres.
+- Supabase Auth/Storage/Realtime desde el SDK oficial.
+- Tailwind CSS + shadcn/ui + Radix UI para componentes.
+- pnpm o bun como package manager, Playwright + Vitest para pruebas.
 
-Estrategia
-----------
-Hay dos caminos. Recomendado: Opción A (Spring Boot). Alternativa rápida: Opción B (microframework HTTP en Java puro) si no quieres cambiar el POM.
+Roadmap de implementación
+-------------------------
+1) **Inicialización del proyecto (Día 0-1)**
+   - Crear repo con la estructura descrita en `estructura_carpetas_frontend_backend.txt`.
+   - Configurar Tailwind, shadcn/ui y Radix; definir tokens de diseño básicos.
+   - Crear carpeta `lib/repositories` que expondrá funciones puras sobre Prisma para separar la lógica de acceso a datos de las Server Actions.
+   - Añadir eslint/prettier y scripts (`pnpm lint`, `pnpm test`, `pnpm format`).
 
-Opción A (RECOMENDADA): Migrar a Spring Boot
--------------------------------------------
-Prerequisitos (local)
-- Java 17 instalado (java -version)
-- Maven instalado (mvn -v)
-- VS Code o IntelliJ
+2) **Supabase + Prisma (Día 1-2)**
+   - Crear proyecto Supabase: habilitar Auth (Google, GitHub), Storage, Realtime.
+   - Añadir `.env.local` con `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`.
+   - Definir `schema.prisma` con entidades MVP: UserProfile, Post, Like, XpEvent, Notification.
+   - Ejecutar `pnpm prisma migrate dev` y `pnpm prisma generate`. Crear script `scripts/seed.ts`.
 
-1) Preparar proyecto Spring Boot
-   a. Desde https://start.spring.io/ (Spring Initializr):
-      - Project: Maven
-      - Language: Java
-      - Spring Boot: 3.x
-      - Group: levely
-      - Artifact: levely
-      - Java: 17
-   - Dependencies: Spring Web, Spring Data JPA, PostgreSQL Driver (opcional: H2 para tests)
-      - Generate → descargar ZIP → extraer sobre el repo (o crear uno nuevo y mover código/README).
+3) **Auth y onboarding (Día 2-3)**
+   - Configurar Supabase Auth helpers (middleware + Server Components) para proteger rutas.
+   - Crear Server Action `completeProfile` para guardar bio/foto y setear XP inicial.
+   - Implementar UI onboarding con shadcn/ui y subida de foto a Supabase Storage.
 
-   b. Alternativa: convertir el POM actual
-      - Establecer parent de Spring Boot y agregar dependencias.
-      - Agregar plugin spring-boot-maven-plugin.
+4) **Modelo XP y niveles (Día 3-4)**
+   - Crear módulo `lib/xp.ts` con fórmula `level = 1 + floor(sqrt(xp / 100))`.
+   - Server Action `awardXp(userId, points, reason)` que inserta en `XpEvent` y actualiza totales.
+   - Añadir tests unitarios para la fórmula y las reglas de XP.
 
-2) Configurar PostgreSQL y JPA (perfiles dev/prod)
-    - Crear archivo src/main/resources/application.properties con:
-       - spring.profiles.active=dev
-    - Configuración dev (PostgreSQL local en Docker):
-       - spring.datasource.url=jdbc:postgresql://localhost:5432/levely
-       - spring.datasource.username=levely
-       - spring.datasource.password=levely
-       - spring.jpa.hibernate.ddl-auto=update
-       - spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-    - (Opcional) Perfil test con H2 (src/main/resources/application-test.properties):
-       - spring.datasource.url=jdbc:h2:mem:levely;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-       - spring.datasource.driverClassName=org.h2.Driver
-       - spring.jpa.hibernate.ddl-auto=create-drop
-       - spring.jpa.show-sql=true
+5) **Publicaciones y likes (Día 4-6)**
+   - Server Actions `createPost`, `toggleLike` usando Prisma y validaciones Zod apoyadas en los repositorios (`PostRepository`, `LikeRepository`).
+   - Subida de imagen opcional (Supabase Storage o Vercel Blob) con URLs públicas.
+   - Feed en App Router (segmento `(dashboard)`) que usa Server Components para listar posts ordenados.
 
-3) Modelo de datos (entidades JPA)
-   Nota general: Las tablas con claves compuestas (Seguimientos, Likes, Usuarios_Logros, Usuarios_Misiones) pueden modelarse con @Embeddable/@EmbeddedId o @IdClass.
+6) **Realtime y notificaciones (Día 6-7)**
+   - Suscribirse a canales Supabase Realtime (tabla `Like`) para actualizar conteos sin recargar.
+   - Opcional: enviar notificaciones a Supabase `Notification` table y mostrarlas en UI; encapsular queries en `NotificationRepository` para reutilizar en Server Actions y cron jobs.
 
-   3.1) Usuarios
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - nombre (String)
-      - email (String, único)
-      - password (String)
-      - biografia (String)
-      - fotoPerfil (String)  // URL
-      - fechaRegistro (Instant/LocalDateTime)
-      - xpTotal (long)
-      - nivel (ManyToOne → Niveles)
+7) **UI y UX (Día 7-9)**
+   - Limpiar componentes en `components/` (cards, forms, modales) usando shadcn/ui.
+   - Estado optimista para crear post y likes; skeleton loaders con Tailwind.
+   - A11y básica gracias a Radix + pruebas con Storybook/Chromatic opcional.
 
-   3.2) Niveles
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - nombre (String)
-      - xpMinima (long)
+8) **Pruebas y calidad (Día 8-10)**
+   - Tests unitarios (Vitest) para helpers (XP, validaciones).
+   - Tests de integración para Server Actions (mocks de Prisma/Supabase).
+   - Playwright E2E: login demo, crear post, dar like, ver XP actualizado.
 
-   3.3) Seguimientos
-      - seguidor (ManyToOne → Usuarios) [PK parte 1]
-      - seguido (ManyToOne → Usuarios)  [PK parte 2]
-      - fechaSeguimiento (Instant/LocalDateTime)
+9) **Despliegue en Vercel (Día 10-11)**
+   - Conectar repo a Vercel, configurar env vars (supabase keys, DATABASE_URL, STORAGE_BUCKET_URL).
+   - Habilitar Preview + Production; forzar `pnpm prisma migrate deploy` en `vercel build`.
+   - Revisar logs y quotas (Auth/Realtime) tras cada deploy.
 
-   3.4) Publicaciones
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - autor (ManyToOne → Usuarios)
-      - contenido (String)
-      - imagenUrl (String) // opcional
-      - categoria (ManyToOne → Categorias)
-      - fechaCreacion (Instant/LocalDateTime)
+10) **Smoke tests y checklist (Día 11-12)**
+    - Ejecutar Playwright contra producción (Vercel) validando Auth, creación de post, likes realtime.
+    - Confirmar seeds en Supabase y limpiar datos de prueba.
+    - Documentar comandos clave, setup Supabase, credenciales OAuth y cómo regenerar componentes shadcn.
 
-   3.5) Comentarios
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - post (ManyToOne → Publicaciones)
-      - autor (ManyToOne → Usuarios)
-      - contenido (String)
-      - fechaCreacion (Instant/LocalDateTime)
+Modelo de datos mínimo en Prisma
+--------------------------------
+- `UserProfile`: id (uuid), email, username, bio, photoUrl, xp, level, createdAt.
+- `Post`: id, authorId (fk → UserProfile), content, imageUrl, createdAt.
+- `Like`: id, postId, userId, createdAt (unique compuesto post+user).
+- `XpEvent`: id, userId, amount, reason, createdAt.
+- `Notification` (opcional en MVP): id, userId, type, message, read, createdAt.
 
-   3.6) Likes
-      - usuario (ManyToOne → Usuarios)     [PK parte 1]
-      - post (ManyToOne → Publicaciones)    [PK parte 2]
-      - fechaLike (Instant/LocalDateTime)
+Acciones clave
+--------------
+- `createPost(data)` → valida con Zod, crea post, guarda imagen, +100 XP al autor.
+- `toggleLike(postId)` → inserta/elimina Like, suma XP al autor cuando se crea.
+- `getFeed()` → Prisma query con include author y likesCount expuesta vía `FeedRepository`.
+- `useRealtimeLikes(postId)` → hook cliente usando Supabase Realtime.
 
-   3.7) Logros
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - nombre (String)
-      - descripcion (String)
-      - xpRecompensa (long)
-      - condicion (String) // definición o regla
+Pruebas recomendadas
+--------------------
+- Vitest: `xp.test.ts`, `posts.test.ts` (validaciones de Server Actions).
+- Playwright: flujo login OAuth (mock), creación de post, like, ver XP.
+- Smoke test posterior al deploy usando GitHub Actions + Playwright en modo headless.
 
-   3.8) Usuarios_Logros
-      - usuario (ManyToOne → Usuarios) [PK parte 1]
-      - logro (ManyToOne → Logros)     [PK parte 2]
-      - fechaDesbloqueo (Instant/LocalDateTime)
+Checklist (sí/no)
+-----------------
+[ ] Proyecto Next.js 15 creado con Tailwind + shadcn/ui + Radix inicializados.
+[ ] Supabase configurado (Auth, Storage, Realtime) y variables definidas.
+[ ] `schema.prisma` + migraciones aplicadas en Supabase.
+[ ] Server Actions para onboarding, posts, likes y XP.
+[ ] Hooks/SDK para Realtime funcionando en el feed.
+[ ] Upload de imágenes operativo (Storage/Blob) con validación.
+[ ] Tests unitarios (Vitest) y E2E (Playwright) verdes.
+[ ] Deploy automático en Vercel con migraciones Prisma.
+[ ] Smoke test post-deploy que valida conexión con la base de datos.
 
-   3.9) Misiones
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - nombre (String)
-      - descripcion (String)
-      - xpRecompensa (long)
-      - condicion (String)
-
-   3.10) Usuarios_Misiones
-      - usuario (ManyToOne → Usuarios) [PK parte 1]
-      - mision (ManyToOne → Misiones)  [PK parte 2]
-      - fechaCompletado (Instant/LocalDateTime)
-
-   3.11) Categorias
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - nombre (String)
-      - descripcion (String)
-
-   3.12) Notificaciones
-      - id (Long, @Id, @GeneratedValue) [PK]
-      - usuario (ManyToOne → Usuarios)
-      - tipo (String)
-      - mensaje (String)
-      - leido (boolean)
-      - fecha (Instant/LocalDateTime)
-
-4) Repositorios (Spring Data JPA)
-   - UsuarioRepository extends JpaRepository<Usuario, Long>
-   - NivelRepository extends JpaRepository<Nivel, Long>
-   - SeguimientoRepository extends JpaRepository<Seguimiento, SeguimientoId>
-   - PublicacionRepository extends JpaRepository<Publicacion, Long>
-   - ComentarioRepository extends JpaRepository<Comentario, Long>
-   - LikeRepository extends JpaRepository<Like, LikeId>
-   - LogroRepository extends JpaRepository<Logro, Long>
-   - UsuarioLogroRepository extends JpaRepository<UsuarioLogro, UsuarioLogroId>
-   - MisionRepository extends JpaRepository<Mision, Long>
-   - UsuarioMisionRepository extends JpaRepository<UsuarioMision, UsuarioMisionId>
-   - CategoriaRepository extends JpaRepository<Categoria, Long>
-   - NotificacionRepository extends JpaRepository<Notificacion, Long>
-
-5) Servicios (lógica)
-   - XpService
-     - addXp(User u, long amount)
-     - getLevel(User u) → fórmula simple (ver abajo)
-   - PostService
-     - createPost(userId, content) → +100 XP al autor
-     - listPosts() ordenados por createdAt desc
-     - likePost(postId, userId) → incrementa likesCount, +1 XP al autor del post
-
-   Fórmula simple de nivel (MVP):
-   - level = 1 + floor(sqrt(xp / 100.0))
-     Ejemplos: 0 XP → nivel 1; 100 XP → nivel 2; 400 XP → nivel 3; 900 XP → nivel 4
-   - O usa umbrales fijos si prefieres (p.e. 0, 150, 500, 1200...).
-
-6) Controladores REST (endpoints)
-   - POST /api/users
-     Body: {"username":"...","bio":"..."}
-     Res: {id, username, bio, xp, level}
-   - GET /api/users/{id}
-     Res: {id, username, bio, xp, level}
-   - POST /api/posts
-     Body: {"authorId":1, "content":"texto"}
-     Efecto: crea post, +100 XP al autor
-     Res: {id, authorId, content, createdAt, likesCount}
-   - GET /api/posts
-     Res: lista de posts más recientes
-   - POST /api/posts/{postId}/like
-     Body: {"userId":2}
-     Efecto: incrementa likesCount; +1 XP al autor del post
-     Res: {id, authorId, content, likesCount}
-
-7) Semillas de datos (opcional pero útil)
-   - CommandLineRunner para crear 1-2 usuarios demo y 1-3 posts.
-
-8) Frontend mínimo (estático)
-   - Colocar en src/main/resources/static/index.html y index.js
-   - index.html:
-     - Form crear usuario
-     - Form crear post (select autor + textarea contenido)
-     - Listado feed con botón "Like"
-   - index.js:
-     - fetch GET /api/posts para pintar el feed
-     - fetch POST /api/posts para crear
-     - fetch POST /api/posts/{id}/like para dar like
-
-9) Ejecutar el proyecto (con PostgreSQL)
-    - Iniciar PostgreSQL (Docker) en Windows PowerShell:
-       - docker run --name levely-postgres -e POSTGRES_DB=levely -e POSTGRES_USER=levely -e POSTGRES_PASSWORD=levely -p 5432:5432 -d postgres:16
-       - (Opcional) Docker Compose:
-          version: "3.9"
-          services:
-             postgres:
-                image: postgres:16
-                container_name: levely-postgres
-                environment:
-                   POSTGRES_DB: levely
-                   POSTGRES_USER: levely
-                   POSTGRES_PASSWORD: levely
-                ports:
-                   - "5432:5432"
-                volumes:
-                   - pgdata:/var/lib/postgresql/data
-          volumes:
-             pgdata:
-    - mvn spring-boot:run
-    - Abrir http://localhost:8080 (UI)
-    - Conectar a BD (pgAdmin/psql): host=localhost, db=levely, user=levely, pass=levely
-
-10) Verificación rápida (manual)
-   - Crear 2 usuarios (A y B)
-   - Crear 1 post con A → verificar XP de A (+100) y nivel
-   - Dar likes al post de A como B (varias veces si está permitido) → verificar XP de A (+1 por like)
-   - Listar feed y comprobar orden y contador de likes
-
-11) Empaquetado
-   - mvn clean package (genera jar ejecutable en target/)
-   - java -jar target/levely-*.jar
-
-12) Git y CI (básico)
-   - git checkout -b mvp
-   - Commit por cada hito (entidades, servicios, controladores, UI)
-   - Push a remoto (si GitHub da 500, reintentar o crear rama alternativa)
-   - (Opcional) GitHub Actions con workflow Java Maven
-
-13) Criterios de aceptación (MVP OK)
-   - Se puede crear usuarios y posts vía UI o API.
-   - Feed muestra posts ordenados y actualiza likes.
-   - Dar like incrementa likesCount y XP del autor.
-   - Nivel del usuario se calcula y se expone en la API (y opcionalmente en la UI).
-   - El proyecto arranca con un solo comando (mvn spring-boot:run) y la BD corre en Docker.
-
-14) Próximos pasos (post-MVP)
-   - Autenticación real (Spring Security, JWT) y autorización básica.
-   - Comentarios, compartidos, guardados, secciones temáticas.
-   - Logros/Misiones y XP variable por acción (según README).
-   - Paginación y orden por relevancia/XP.
-   - Persistencia real (PostgreSQL/MySQL) y perfiles (dev/prod).
-   - Tests unitarios e integración (JUnit + MockMvc).
-   - Dockerfile + despliegue (Railway/Render/Azure/App Service).
-
-Opción B (Alternativa rápida): Java + Microframework HTTP
---------------------------------------------------------
-Si deseas evitar Spring Boot ahora mismo:
-- Añade una dependencia ligera como SparkJava o Javalin.
-- Implementa endpoints mínimos en 1-2 clases.
-- Persistencia en memoria con listas/mapas o H2 simple sin JPA.
-- Misma lógica de XP/likes pero sin capas adicionales.
-
-Ventajas: Arranque rápido. Desventajas: menos escalable para las siguientes fases.
-
-Notas y troubleshooting
+Próximos pasos post-MVP
 -----------------------
-- Error GitHub 500 al hacer push: suele ser temporal. Esperar y reintentar; si urge, crea rama nueva (git push origin mvp o backup-main).
-- Puerto 8080 en uso: cerrar procesos o cambiar server.port=8081 en application.properties.
-- PostgreSQL no arranca: comprobar docker logs (docker logs levely-postgres), que el puerto 5432 no esté ocupado, y variables de entorno.
+- Agregar Supabase RLS avanzada y Clerk como alternativa de Auth si se necesita multi-org.
+- Misiones/logros con reglas configurables en Prisma + dashboards.
+- Paginación infinita y ranking por XP usando Prisma + caché.
+- Auditoría y observabilidad (Vercel Analytics, Logflare, OpenTelemetry).
+- Feature flags para experimentos (LaunchDarkly o Supabase Feature Flags beta).
 
-Estado actual del repo
-----------------------
-- Proyecto Maven Java 17 con Main.java "Hello world" (sin Spring).
-- Para el MVP recomendado, seguir Opción A (Spring Boot) o, si prefieres menor cambio, Opción B temporal.
-
-Checklist rápida (sí/no)
-------------------------
-[ ] POM con Spring Boot y deps (Web, JPA, PostgreSQL) [H2 opcional]
-[ ] application.properties creado
-[ ] Entidades (Usuarios, Niveles, Seguimientos, Publicaciones, Comentarios, Likes, Logros, Usuarios_Logros, Misiones, Usuarios_Misiones, Categorias, Notificaciones)
-[ ] Repositorios JPA
-[ ] Servicios (PostService, XpService)
-[ ] Controladores REST
-[ ] Semillas (opcional)
-[ ] Frontend estático simple
-[ ] Arranque local OK (mvn spring-boot:run)
-[ ] Verificación de flujos (crear post, like, XP, nivel)
-[ ] Empaquetado (mvn package)
+Notas útiles
+------------
+- Controlar el pool de conexiones: evita funciones Edge en acciones que usen Prisma.
+- Supabase gratis cubre hasta 500 MB; limpia datos de prueba regularmente.
+- Para Realtime de alta demanda considerar Prisma Pulse (beta) o Supabase Channels dedicados.
+- Mantén `.env.local` fuera de git y usa `.env.local.example` para documentación.
 
 Fin del documento.

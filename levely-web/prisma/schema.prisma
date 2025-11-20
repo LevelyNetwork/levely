@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  username   String   @unique
+  bio        String?  @db.Text
+  photoUrl   String?
+  xp         Int      @default(0)
+  level      Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  posts      Post[]
+  likes      Like[]
+  xpEvents   XpEvent[]
+  notifications Notification[]
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  content   String
+  imageUrl  String?
+  authorId  String
+  author    UserProfile @relation(fields: [authorId], references: [id])
+  likes     Like[]
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  post      Post        @relation(fields: [postId], references: [id])
+  user      UserProfile @relation(fields: [userId], references: [id])
+
+  @@unique([userId, postId], name: "userId_postId")
+}
+
+model XpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  reason    String
+  user      UserProfile @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  user      UserProfile @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+}

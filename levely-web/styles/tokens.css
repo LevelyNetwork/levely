@@ -1,0 +1,15 @@
+:root {
+  --surface-primary: #05070f;
+  --surface-card: #0f172a;
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --brand-primary: #5a54ff;
+  --brand-accent: #c084fc;
+  --success: #22c55e;
+  --danger: #ef4444;
+}
+
+body {
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}

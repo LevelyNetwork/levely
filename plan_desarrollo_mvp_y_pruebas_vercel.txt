@@ -1,0 +1,49 @@
+Plan de desarrollo para entregar un MVP en Next.js 15 (App Router) con Supabase/Postgres y validar la conexión directa desde Vercel en producción.
+
+1. Definición del MVP (Día 0-1)
+1.1. Alcance mínimo centrado en autenticación Supabase Auth (Google/GitHub), onboarding y feed/dash con datos en tiempo real.
+1.2. Historias priorizadas describiendo flujos que usen Server Actions + Prisma (creación/lectura) y eventos realtime (likes/follows).
+1.3. Checklist técnico: tiempos de respuesta de Server Actions, consumo del pool de conexiones de Supabase, cuotas gratuitas y métricas de Realtime; definir fórmula XP `level = 1 + floor(sqrt(xp/100))` y reglas (+100 crear post, +1 like recibido).
+
+2. Preparación técnica (Día 1-2)
+2.1. Crear el proyecto Next.js 15 con App Router y configurar Tailwind + shadcn/ui + Radix siguiendo la estructura propuesta.
+2.2. Definir `.env.local` con URLs/keys de Supabase (anon, service role), `NEXT_PUBLIC_SUPABASE_URL`, credenciales Prisma Pulse y buckets de Storage.
+2.3. Crear `lib/prisma` y `lib/repositories` (DAO layer) para encapsular todo acceso a datos; documentar sus contratos antes de escribir Server Actions.
+2.4. Añadir scripts de verificación (`pnpm lint`, `pnpm test`, `pnpm prisma:generate`, `pnpm prisma:migrate dev`, `pnpm test:e2e`) y workflow base en `.github/workflows` (lint + unit + Playwright smoke en cada PR).
+
+3. Capa de datos y Server Actions (Día 2-5)
+3.1. Modelar el `schema.prisma` con las entidades del MVP y generar migraciones contra Supabase.
+3.2. Implementar Server Actions (`completeProfile`, `createPost`, `toggleLike`, `awardXp`) apoyándose en los repositorios (p. ej. `UserRepository`, `PostRepository`) y exponer API Routes edge-friendly solo cuando sea necesario; usar Prisma Accelerate/Pulse si se requiere caching.
+3.3. Configurar autenticación con Supabase Auth (middleware + helpers) y roles (RLS) para proteger tablas; documentar scopes en `docs/auth.md`.
+3.4. Escribir pruebas unitarias/integración con Vitest/Playwright para las acciones críticas y mocks de Supabase (Auth, Storage, Realtime) garantizando XP correcto; testear los repositorios de forma aislada.
+3.5. Preparar scripts `scripts/seed.ts` y `scripts/postdeploy.ts` para poblar datos iniciales y ejecutar migraciones en Preview/Prod.
+
+4. UI y experiencia (Día 4-9)
+4.1. Construir vistas en App Router (landing, dashboard, detalle) usando Tailwind + shadcn/ui.
+4.2. Integrar Supabase Client para suscripción a canales Realtime (likes/follows/notificaciones) y fallback a Prisma Pulse si se requiere escalabilidad; exponer hooks en `lib/realtime/`.
+4.3. Implementar subida de fotos con Supabase Storage o Vercel Blob, validando tamaño/mime y limpiando uploads huérfanos.
+4.4. Tests de componentes críticos con Storybook/Chromatic opcional, verificación de accesibilidad (Radix + testing-library) y estados optimistas.
+
+5. Infraestructura y despliegue inicial (Día 8-11)
+5.1. Conectar el repo con Vercel (framework Next.js) y definir entornos (Preview, Production) con secrets heredados.
+5.2. Configurar Supabase proyecto (DB, Auth, Storage, Realtime) y cargar migraciones desde CI en cada deploy principal (`pnpm prisma migrate deploy`).
+5.3. Añadir monitoreo (Vercel Observability, Supabase logs, Logflare) y alertas básicas mediante webhooks/Slack.
+5.4. Verificar compatibilidad edge/servidor clásico según las dependencias (Prisma → serverful, Realtime puede ir en el cliente) y activar Accelerate si aplica.
+
+6. Pruebas de conexión en Vercel (Día 11-13)
+6.1. Confirmar que `DATABASE_URL` de Supabase y claves de servicio estén configuradas como Environment Variables en Vercel.
+6.2. Ejecutar smoke tests automáticos (Playwright) tras el deploy: login, onboarding, creación de post (con imagen) vía Server Action, verificación de likes en tiempo real.
+6.3. Validar uploads (Storage/Blob) y revisar logs/metrics (Supabase, Prisma, Vercel) para detectar throttling o límites de conexiones.
+6.4. Ajustar Realtime policies y plan gratuito según el consumo observado; documentar procedimientos de rollback.
+
+7. Validación final y checklist (Día 13-15)
+7.1. QA funcional sobre flows principales (login, onboarding, crear post, like realtime, cálculo de nivel) con datos reales en Supabase.
+7.2. Validar rendimiento con k6 apuntando al endpoint Vercel + Supabase (focus en Server Actions y Realtime), monitoreando conexiones simultáneas.
+7.3. Crear documentación: cómo regenerar shadcn/ui, comandos Prisma, setup de Supabase, cuentas OAuth, seeds y manejo de Storage.
+7.4. Go/No-Go basado en métricas de latencia, estabilidad Realtime, resultados de QA y cuota restante en Supabase.
+
+Entregables clave
+- Proyecto Next.js 15 organizado según `estructura_carpetas_frontend_backend.txt`.
+- Pipelines (GitHub Actions + Vercel) que ejecutan lint/tests/prisma migrate antes de desplegar.
+- Supabase configurado (DB, Auth, Storage, Realtime) con migraciones versionadas y seeds reproducibles.
+- Evidencia de pruebas de conexión en Vercel (smoke tests, logs, métricas Realtime).
