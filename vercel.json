@@ -1,8 +1,8 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "installCommand": "cd levely-web && corepack enable && corepack prepare pnpm@9.12.0 --activate && pnpm install --frozen-lockfile",
-  "buildCommand": "cd levely-web && corepack enable && corepack prepare pnpm@9.12.0 --activate && prisma generate && next build",
-  "devCommand": "cd levely-web && corepack enable && corepack prepare pnpm@9.12.0 --activate && next dev",
+  "installCommand": "cd levely-web && corepack enable && corepack prepare pnpm@8.15.4 --activate && pnpm -v && pnpm install --frozen-lockfile",
+  "buildCommand": "cd levely-web && corepack enable && corepack prepare pnpm@8.15.4 --activate && prisma generate && next build",
+  "devCommand": "cd levely-web && corepack enable && corepack prepare pnpm@8.15.4 --activate && next dev",
   "outputDirectory": "levely-web/.next"
 }
