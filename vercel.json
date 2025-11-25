@@ -2,7 +2,7 @@
   "version": 2,
   "framework": "nextjs",
   "installCommand": "npx pnpm@8.15.4 install --frozen-lockfile",
-  "buildCommand": "cd levely-web && pnpm run build",
-  "devCommand": "cd levely-web && pnpm run dev",
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm run dev",
   "outputDirectory": "levely-web/.next"
 }
